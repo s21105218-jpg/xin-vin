@@ -166,7 +166,7 @@
 
         .progress-bar-fill {
             height: 100%;
-            width: 12.5%; /* 2 out of 16 */
+            width: 18.75%; /* 3 out of 16 */
             background: linear-gradient(90deg, #E6A15C, #8AA888);
             border-radius: var(--radius-full);
             transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
@@ -442,7 +442,7 @@
             <div class="progress-box">
                 <div class="progress-header">
                     <span>闖關學習進度</span>
-                    <span><strong>2</strong> / 16 個關卡</span>
+                    <span><strong>3</strong> / 16 個關卡</span>
                 </div>
                 <div class="progress-bar-bg">
                     <div class="progress-bar-fill"></div>
@@ -482,18 +482,20 @@
                     </div>
                 </a>
 
-                <!-- 按鈕 3 至 16 (未解鎖) -->
-                <a href="javascript:void(0)" class="card locked" onclick="showLockedToast('Week 3')">
+                <!-- 按鈕 3 (已解鎖) -->
+                <a href="w3/index.html" class="card unlocked">
                     <div class="card-header">
                         <span class="week-tag">Week 03</span>
-                        <span class="lock-icon">🔒</span>
+                        <span style="color: var(--accent-green); font-size: 0.75rem; font-weight: 600;">● 已開放</span>
                     </div>
-                    <div class="card-title">Week 3 - 互動待辦事項</div>
+                    <div class="card-title">Week 3 - 迷因產生器</div>
                     <div class="card-footer">
-                        <span>尚待解鎖</span>
+                        <span>開啟頁面</span>
+                        <div class="action-icon">➔</div>
                     </div>
                 </a>
 
+                <!-- 按鈕 4 至 16 (未解鎖) -->
                 <a href="javascript:void(0)" class="card locked" onclick="showLockedToast('Week 4')">
                     <div class="card-header">
                         <span class="week-tag">Week 04</span>
