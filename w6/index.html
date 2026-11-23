@@ -1,1 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>今日選哪個？｜日式奶油風二選一投票所</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Zen Maru Gothic (圓潤日系字體) + Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+            maru: ['"Zen Maru Gothic"', '"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            cream: {
+              bg: '#FAF6F0',
+              card: '#FFFDF9',
+              soft: '#F4ECE1',
+              border: '#E8DCCB',
+              latte: '#B88B58',
+              latteDark: '#9E7343',
+              espresso: '#4A3F35',
+              taupe: '#8C7D70',
+              terracotta: '#D98A6C',
+              matcha: '#869F82',
+              butter: '#F6E4C1'
+            }
+          },
+          boxShadow: {
+            'cream': '0 14px 34px -10px rgba(139, 115, 85, 0.12)',
+            'polaroid': '0 6px 18px -4px rgba(74, 63, 53, 0.08)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FAF6F0;
+      background-image: radial-gradient(#E5D8C5 1px, transparent 1px);
+      background-size: 22px 22px;
+      color: #4A3F35;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 拍立得與奶油卡片微互動 */
+    .polaroid-slot {
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .polaroid-slot:active {
+      transform: scale(0.98);
+    }
+
+    /* 進度條平滑動畫 */
+    .bar-fill {
+      transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* 隱藏原生檔案上傳按鈕 */
+    input[type="file"] {
+      display: none;
+    }
+
+    /* 自訂 datetime-local 樣式 */
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      opacity: 0.6;
+      cursor: pointer;
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .animate-float {
+      animation: floatSlow 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between py-6 px-4 sm:py-10">
+
+  <!-- Toast 通知氣泡 -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-2">
+    <div id="toast-msg" class="bg-cream-espresso text-cream-card text-sm font-medium px-5 py-2.5 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
+      <span>提示訊息</span>
+    </div>
+  </div>
+
+  <!-- 全域讀取遮罩 -->
+  <div id="loading-overlay" class="fixed inset-0 bg-cream-bg/85 backdrop-blur-sm z-40 hidden flex-col items-center justify-center p-6">
+    <div class="w-16 h-16 rounded-3xl bg-cream-card border border-cream-border shadow-cream flex items-center justify-center mb-4 animate-float">
+      <span class="text-3xl">🍮</span>
+    </div>
+    <p id="loading-text" class="font-maru font-bold text-lg text-cream-espresso tracking-wide">正在沖洗照片並上傳雲端...</p>
+    <p class="text-xs text-cream-taupe mt-1.5">請稍候幾秒鐘，馬上就好</p>
+  </div>
+
+  <!-- 隱藏管理員開票彩蛋 Modal -->
+  <div id="admin-modal" class="fixed inset-0 bg-cream-espresso/40 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-cream-card border border-cream-border rounded-3xl max-w-sm w-full p-6 shadow-cream transform transition-all">
+      <div class="flex items-center justify-between mb-3">
+        <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-cream-butter text-cream-latteDark">
+          ✦ 房主管理彩蛋
+        </span>
+        <button onclick="closeAdminModal()" class="text-cream-taupe hover:text-cream-espresso text-lg leading-none p-1">✕</button>
+      </div>
+      <h3 class="font-maru font-bold text-xl text-cream-espresso mb-2">要提前結束並開票嗎？</h3>
+      <p class="text-sm text-cream-taupe leading-relaxed mb-5">
+        按下確認後，系統會立即鎖定目前票數並公開投票結果，所有朋友都能看到最終勝負。
+      </p>
+      <div class="flex gap-2.5">
+        <button onclick="closeAdminModal()" class="flex-1 py-2.5 px-4 rounded-2xl border border-cream-border text-sm font-medium text-cream-taupe hover:bg-cream-soft transition">
+          再等一下
+        </button>
+        <button onclick="revealPollNow()" class="flex-1 py-2.5 px-4 rounded-2xl bg-cream-latte hover:bg-cream-latteDark text-white text-sm font-bold shadow-sm transition">
+          立即開票 ✨
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主容器 -->
+  <main class="w-full max-w-md mx-auto relative">
+    
+    <!-- 頂部品牌標題列 + 右上角隱藏彩蛋 -->
+    <header class="relative flex items-center justify-center mb-6 pt-1">
+      <div onclick="switchToCreateView()" class="cursor-pointer inline-flex items-center gap-2 bg-cream-card/90 border border-cream-border px-4 py-1.5 rounded-full shadow-xs">
+        <span class="text-base">☕</span>
+        <span class="font-maru font-bold text-sm tracking-wider text-cream-espresso">今日選哪個・二選一投票所</span>
+      </div>
+
+      <!-- 右上角隱藏彩蛋按鈕 -->
+      <button 
+        id="easter-egg-btn"
+        onclick="handleEasterEggClick()"
+        title="房主彩蛋"
+        aria-label="房主管理開票"
+        class="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-cream-latte/45 hover:text-cream-latte hover:bg-cream-card/80 transition duration-300 select-none">
+        <span class="text-sm">✦</span>
+      </button>
+    </header>
+
+    <!-- ==========================================
+         視圖 1：建立投票 (Create Mode)
+    =========================================== -->
+    <section id="view-create" class="bg-cream-card border border-cream-border rounded-[2rem] p-5 sm:p-7 shadow-cream">
+      <div class="text-center mb-6">
+        <h1 class="font-maru font-bold text-2xl text-cream-espresso tracking-tight">拍下猶豫的兩個選擇</h1>
+        <p class="text-xs text-cream-taupe mt-1">自動裁切 1:1 正方形・設定時間準時開票</p>
+      </div>
+
+      <!-- 步驟 1：投票題目 -->
+      <div class="mb-5">
+        <label class="block font-maru font-bold text-sm text-cream-espresso mb-2">
+          <span class="inline-block w-5 h-5 rounded-full bg-cream-butter text-cream-latteDark text-xs text-center leading-5 mr-1">1</span>
+          想請大家幫你決定什麼？
+        </label>
+        <input 
+          id="input-title" 
+          type="text" 
+          maxlength="40"
+          placeholder="例如：午餐吃拉麵還是咖哩？" 
+          class="w-full bg-cream-bg/70 border border-cream-border focus:border-cream-latte focus:bg-white rounded-2xl px-4 py-3 text-sm text-cream-espresso placeholder-cream-taupe/60 outline-none transition"
+        />
+        <!-- 靈感快速標籤 -->
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <button type="button" onclick="fillTitle('今天午餐吃哪間好？')" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">🍜 午餐吃哪間</button>
+          <button type="button" onclick="fillTitle('買哪一件比較好看？')" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">🧥 買哪件衣服</button>
+          <button type="button" onclick="fillTitle('週末下午茶選哪款甜點？')" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">🍰 甜點二選一</button>
+        </div>
+      </div>
+
+      <!-- 步驟 2：A / B 拍照上傳 (1:1 正方形) -->
+      <div class="mb-5">
+        <div class="flex items-center justify-between mb-2">
+          <label class="font-maru font-bold text-sm text-cream-espresso">
+            <span class="inline-block w-5 h-5 rounded-full bg-cream-butter text-cream-latteDark text-xs text-center leading-5 mr-1">2</span>
+            拍攝或選取兩張照片
+          </label>
+          <span class="text-[11px] text-cream-taupe">自動裁切 1:1</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3.5">
+          <!-- 選項 A 拍立得框 -->
+          <div>
+            <input id="file-A" type="file" accept="image/*" onchange="handleImageSelect(event, 'A')" />
+            <div onclick="document.getElementById('file-A').click()" class="polaroid-slot cursor-pointer bg-cream-bg/60 border-2 border-dashed border-cream-border hover:border-cream-terracotta rounded-2xl p-2.5 flex flex-col items-center">
+              <div class="w-full aspect-square rounded-xl bg-cream-soft/70 overflow-hidden relative flex flex-col items-center justify-center">
+                <img id="preview-A" class="w-full h-full object-cover hidden" alt="選項 A 預覽" />
+                <div id="placeholder-A" class="flex flex-col items-center justify-center p-3 text-center">
+                  <div class="w-10 h-10 rounded-full bg-cream-card shadow-xs flex items-center justify-center text-cream-terracotta mb-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <span class="text-xs font-bold text-cream-espresso">點擊拍照 / 選圖</span>
+                  <span class="text-[10px] text-cream-taupe mt-0.5" id="info-A">800×800 壓縮</span>
+                </div>
+                <span id="retake-A" class="hidden absolute bottom-2 right-2 bg-cream-espresso/75 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-xs">重拍</span>
+              </div>
+              <div class="mt-2 flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-cream-terracotta text-white font-maru font-bold text-xs flex items-center justify-center">A</span>
+                <span class="font-maru font-bold text-xs text-cream-espresso">選手 A</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 選項 B 拍立得框 -->
+          <div>
+            <input id="file-B" type="file" accept="image/*" onchange="handleImageSelect(event, 'B')" />
+            <div onclick="document.getElementById('file-B').click()" class="polaroid-slot cursor-pointer bg-cream-bg/60 border-2 border-dashed border-cream-border hover:border-cream-matcha rounded-2xl p-2.5 flex flex-col items-center">
+              <div class="w-full aspect-square rounded-xl bg-cream-soft/70 overflow-hidden relative flex flex-col items-center justify-center">
+                <img id="preview-B" class="w-full h-full object-cover hidden" alt="選項 B 預覽" />
+                <div id="placeholder-B" class="flex flex-col items-center justify-center p-3 text-center">
+                  <div class="w-10 h-10 rounded-full bg-cream-card shadow-xs flex items-center justify-center text-cream-matcha mb-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <span class="text-xs font-bold text-cream-espresso">點擊拍照 / 選圖</span>
+                  <span class="text-[10px] text-cream-taupe mt-0.5" id="info-B">800×800 壓縮</span>
+                </div>
+                <span id="retake-B" class="hidden absolute bottom-2 right-2 bg-cream-espresso/75 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-xs">重拍</span>
+              </div>
+              <div class="mt-2 flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-cream-matcha text-white font-maru font-bold text-xs flex items-center justify-center">B</span>
+                <span class="font-maru font-bold text-xs text-cream-espresso">選手 B</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 3：截止開票時間 -->
+      <div class="mb-6">
+        <label class="block font-maru font-bold text-sm text-cream-espresso mb-2">
+          <span class="inline-block w-5 h-5 rounded-full bg-cream-butter text-cream-latteDark text-xs text-center leading-5 mr-1">3</span>
+          設定自動開票時間
+        </label>
+        <input 
+          id="input-deadline" 
+          type="datetime-local" 
+          class="w-full bg-cream-bg/70 border border-cream-border focus:border-cream-latte focus:bg-white rounded-2xl px-4 py-2.5 text-sm text-cream-espresso outline-none transition"
+        />
+        <!-- 快速時間設定 -->
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <button type="button" onclick="setQuickDeadline(5)" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">+5 分鐘</button>
+          <button type="button" onclick="setQuickDeadline(15)" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">+15 分鐘</button>
+          <button type="button" onclick="setQuickDeadline(60)" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">+1 小時</button>
+          <button type="button" onclick="setQuickDeadline(180)" class="text-[11px] bg-cream-soft hover:bg-cream-butter/70 text-cream-taupe hover:text-cream-espresso px-2.5 py-1 rounded-full transition">+3 小時</button>
+        </div>
+      </div>
+
+      <!-- 送出按鈕 -->
+      <button 
+        onclick="createPoll()" 
+        class="w-full py-3.5 rounded-2xl bg-cream-latte hover:bg-cream-latteDark active:scale-[0.99] text-white font-maru font-bold text-base shadow-md transition flex items-center justify-center gap-2">
+        <span>建立專屬投票連結</span>
+        <span>✨</span>
+      </button>
+    </section>
+
+    <!-- ==========================================
+         視圖 2：建立成功＆分享連結 (Share View)
+    =========================================== -->
+    <section id="view-created" class="hidden bg-cream-card border border-cream-border rounded-[2rem] p-6 sm:p-8 shadow-cream text-center">
+      <div class="w-16 h-16 rounded-3xl bg-cream-butter/70 text-3xl flex items-center justify-center mx-auto mb-4">
+        🎉
+      </div>
+      <h2 class="font-maru font-bold text-2xl text-cream-espresso">投票建立完成！</h2>
+      <p class="text-xs text-cream-taupe mt-1.5 mb-5">把專屬連結傳到群組，時間一到就會自動開票</p>
+
+      <div class="bg-cream-bg border border-cream-border rounded-2xl p-3.5 mb-4 text-left">
+        <div class="flex items-center justify-between text-[11px] text-cream-taupe mb-1">
+          <span>專屬投票網址</span>
+          <span id="created-poll-id" class="font-mono font-bold text-cream-latteDark"></span>
+        </div>
+        <input 
+          id="share-url-input" 
+          type="text" 
+          readonly 
+          class="w-full bg-transparent text-xs font-mono text-cream-espresso outline-none select-all"
+        />
+      </div>
+
+      <div class="space-y-2.5">
+        <button 
+          onclick="copyShareLink()" 
+          class="w-full py-3 rounded-2xl bg-cream-latte hover:bg-cream-latteDark text-white font-maru font-bold text-sm shadow-sm transition flex items-center justify-center gap-2">
+          <span>📋 複製分享連結</span>
+        </button>
+        <button 
+          onclick="enterCreatedPoll()" 
+          class="w-full py-3 rounded-2xl bg-cream-soft hover:bg-cream-butter/70 text-cream-espresso font-maru font-bold text-sm transition flex items-center justify-center gap-2">
+          <span>立即進入投票畫面 ➔</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         視圖 3：投票與開票結果 (Vote / Reveal View)
+    =========================================== -->
+    <section id="view-vote" class="hidden bg-cream-card border border-cream-border rounded-[2rem] p-5 sm:p-7 shadow-cream">
+      
+      <!-- 投票讀取中骨架 -->
+      <div id="vote-skeleton" class="py-12 text-center">
+        <div class="text-3xl mb-3 animate-bounce">🥐</div>
+        <p class="font-maru font-bold text-base text-cream-espresso">正在載入投票內容...</p>
+      </div>
+
+      <!-- 找不到投票錯誤畫面 -->
+      <div id="vote-error" class="hidden py-10 text-center">
+        <div class="text-4xl mb-3">🍂</div>
+        <h3 class="font-maru font-bold text-lg text-cream-espresso">找不到這場投票</h3>
+        <p id="vote-error-msg" class="text-xs text-cream-taupe mt-1 mb-5">連結可能已失效或編號有誤</p>
+        <button onclick="switchToCreateView()" class="px-5 py-2.5 rounded-2xl bg-cream-latte text-white font-maru font-bold text-sm">
+          發起一個新投票
+        </button>
+      </div>
+
+      <!-- 投票主內容 -->
+      <div id="vote-content" class="hidden">
+        <!-- 狀態與倒數列 -->
+        <div class="flex flex-col items-center text-center mb-5">
+          <div id="status-badge" class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold bg-cream-butter/80 text-cream-latteDark mb-3">
+            <span class="w-2 h-2 rounded-full bg-cream-matcha animate-pulse"></span>
+            <span>投票進行中</span>
